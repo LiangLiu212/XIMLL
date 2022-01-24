@@ -126,18 +126,18 @@ __global__ void gpu_aa(double *g_xithe,
 }
 
 //=====================================================================
-void ReadData(int flag[4])
+void ReadData(int flag[4], const int index, const int MM)
 {
 		//	int years = 2;
 		const char *type[6] = {"DATA", "BKG", "PHSP", "DATA", "BKG", "PHSP"};
 		//	int flag[4] = {2009, 2012, 2018, 2019};
 		const char *file[6] = {
-				"/data/liul/workarea/XIXI/Refined/tmpRef1pm2012.root", 
-				"/data/liul/workarea/XIXI/Refined/tmpRef1pm2012.root",
-				"/data/liul/workarea/XIXI/Refined/phspRefpm2012.root",
-				"/data/liul/workarea/XIXI/Refined/tmpRef1pp2012.root",
-				"/data/liul/workarea/XIXI/Refined/tmpRef1pp2012.root", 
-				"/data/liul/workarea/XIXI/Refined/phspRefpp2012.root" };
+				"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root", 
+				"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root",
+				"/data/liul/workarea/XIXI/Rec3/phspRecpm2012.root",
+				"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root",
+				"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root", 
+				"/data/liul/workarea/XIXI/Rec3/phspRecpp2012.root" };
 
 		for(int i = 0; i < years; i++){
 				for(int j = 0; j < 6; j ++){
@@ -149,13 +149,18 @@ void ReadData(int flag[4])
 		}
 
 		for(int i = 0; i < years; i++)
-				for(int j = 0; j < 2; j ++)
-						angdis[i][j] = new AngDisXiXi();
+				for(int j = 0; j < 2; j ++){
+								if(angdis[i][j]){
+						}
+						else{
+								angdis[i][j] = new AngDisXiXi();
+						}
+				}
 
 		for(int i = 0; i < years; i++){ 		// read data
 				for(int j = 0; j < 6; j ++){
 						int l = j / 3;
-						NN[i][j] =  readData(file[j], angdis[i][l], angdata[i][j], flag[i], type[j]);
+						NN[i][j] =  readData(file[j], angdis[i][l], angdata[i][j], flag[i], type[j], index, MM);
 				}
 		}
 		for(int i = 0; i < years; i++){
@@ -329,7 +334,7 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 		}
 
 		f = llk;
-		if(fit_step%10 == 0){
+		if(fit_step%100 == 0){
 		std::cout << "Loglike: " << f << std::endl; 
 		for( int i = 0; i<10 ; i++ ) cout<<pp[i]<<" ";
 		cout << endl;
@@ -338,7 +343,9 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 }
 //=====================================================================
 // input [1] =  0; [2] =  type; [3] = step; [4] = output file
-int main(int argc, char** argv){
+void XiXiMLL(int argc, char** argv, const int index, const int MM){
+
+
 		ofstream out;
 		TString outfile_name = argv[1];
 		cout << outfile_name << endl;
@@ -362,12 +369,12 @@ int main(int argc, char** argv){
 						i_year.push_back(year[i]);
 				}
 		}
-		ReadData(year);
-		for(int i = 0; i < years; i++){
-				for(int j = 0; j < 2; j++){
-						angdis[i][j]->PrintInt();
-				}
-		}
+		ReadData(year, index, MM);
+//		for(int i = 0; i < years; i++){
+//				for(int j = 0; j < 2; j++){
+//						angdis[i][j]->PrintInt();
+//				}
+//		}
 		cout << "OK 11111111113" << endl;
 		// instantiating the values to be measured 
 		//
@@ -433,5 +440,12 @@ int main(int argc, char** argv){
 		out << res[6]<< "," << err_res[6] << "," << res[7]<< "," << err_res[7]<< ",";
 		out << res[8]<< "," << err_res[8] << "," << res[9]<< "," << err_res[9]<< endl;
 		out.close();
-		return 0;
+	//	return 0;
 }
+
+int main(int argc, char **argv){
+	for(int i  = 0; i < 30; i++){
+		XiXiMLL(argc, argv, i, 30);
+	}
+}
+

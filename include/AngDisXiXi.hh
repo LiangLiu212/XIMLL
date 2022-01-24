@@ -10,7 +10,10 @@ class AngDisXiXi {
 		public:
 
 
-				AngDisXiXi(){}   
+				AngDisXiXi(){
+						isPHSPinte = false;
+				}   
+
 				~AngDisXiXi() {}
 				 double Amp(double theta,
 								double LThe,double LPhi,double LbThe,
@@ -45,8 +48,11 @@ class AngDisXiXi {
 
 				}
 
+				bool isphspintegral(){return isPHSPinte;};
+
 
 				void AddToIntegral( double theta, double LThe,double LPhi,double LbThe, double LbPhi,double pThe,double pPhi, double apThe, double apPhi  ){
+						isPHSPinte =true;
 
 
 						AAProd1212 prod(1, 1, theta, 1);
@@ -129,6 +135,7 @@ class AngDisXiXi {
 
 
 		private:
+				 bool isPHSPinte;
 				double  p_Jpsi_alpha;
 				double 	p_Jpsi_phi;
 				double 	p_Xi_alpha;

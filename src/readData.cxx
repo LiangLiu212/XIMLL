@@ -2,7 +2,7 @@
 #include "TTree.h"
 #include "readData.h"
 
-int readData(const char *filename, AngDisXiXi *angdis, double **para, int flag, const char *type){
+int readData(const char *filename, AngDisXiXi *angdis, double **para, int flag, const char *type, const int index, const int MM){
 
 		bool phsp = false;
 		if(strcmp(type, "PHSP") == 0) phsp = true;
@@ -65,8 +65,19 @@ int readData(const char *filename, AngDisXiXi *angdis, double **para, int flag, 
 		t1->SetBranchAddress("runNo", &runNo);
 		int nn = 0;
 		int NEvt = t1->GetEntries();
+		int iEvt  = NEvt / MM;
+		int low = index * iEvt;
+		int high = (index + 1) * iEvt;
+		if(phsp){
+				low = 0;
+				high = NEvt;
+				if(angdis->isphspintegral()){
+						return NEvt;
+				}
+		}
+
 //		NEvt = 10000;
-		for(int i = 0; i <  NEvt; i++){
+		for(int i = low; i <  high; i++){
 				t1->GetEntry(i);
 				if(abs(runNo) < runNo_low || abs(runNo) > runNo_high) continue;
 				nn++;
