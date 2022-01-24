@@ -6,7 +6,9 @@
 int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag, const char *type, const int index, const int MM){
 
 		bool phsp = false;
+		bool bkg = false;
 		if(strcmp(type, "PHSP") == 0) phsp = true;
+		if(strcmp(type, "BKG") == 0) bkg = true;
 
 		int runNo_low = 0;
 		int runNo_high = 0;
@@ -75,6 +77,10 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 				if(angdis->isphspintegral()){
 						return NEvt;
 				}
+		}
+		if(bkg){
+				low = 0;
+				high = NEvt;
 		}
 
 //		NEvt = 10000;
