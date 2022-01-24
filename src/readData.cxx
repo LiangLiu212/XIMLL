@@ -1,8 +1,9 @@
 #include "TFile.h"
 #include "TTree.h"
+#include "TString.h"
 #include "readData.h"
 
-int readData(const char *filename, AngDisXiXi *angdis, double **para, int flag, const char *type, const int index, const int MM){
+int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag, const char *type, const int index, const int MM){
 
 		bool phsp = false;
 		if(strcmp(type, "PHSP") == 0) phsp = true;
@@ -51,7 +52,7 @@ int readData(const char *filename, AngDisXiXi *angdis, double **para, int flag, 
 		Double_t the, Lthe, Lphi, Lbthe, Lbphi, pthe, pphi, apthe, apphi;
 		int runNo;
 
-		TFile *f1 = new TFile(filename, "read");
+		TFile *f1 = new TFile(filename.Data(), "read");
 		TTree *t1 = (TTree*)f1->Get("xixi");
 		t1->SetBranchAddress("the", &the);
 		t1->SetBranchAddress("Lthe", &Lthe);

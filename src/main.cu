@@ -126,18 +126,18 @@ __global__ void gpu_aa(double *g_xithe,
 }
 
 //=====================================================================
-void ReadData(int flag[4], const int index, const int MM)
+void ReadData(int flag[4], const int index, const int MM, const TString file[6])
 {
 		//	int years = 2;
 		const char *type[6] = {"DATA", "BKG", "PHSP", "DATA", "BKG", "PHSP"};
 		//	int flag[4] = {2009, 2012, 2018, 2019};
-		const char *file[6] = {
-				"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root", 
-				"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root",
-				"/data/liul/workarea/XIXI/Rec3/phspRecpm2012.root",
-				"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root",
-				"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root", 
-				"/data/liul/workarea/XIXI/Rec3/phspRecpp2012.root" };
+	//	const char *file[6] = {
+	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root", 
+	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root",
+	//			"/data/liul/workarea/XIXI/Rec3/phspRecpm2012.root",
+	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root",
+	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root", 
+	//			"/data/liul/workarea/XIXI/Rec3/phspRecpp2012.root" };
 
 		for(int i = 0; i < years; i++){
 				for(int j = 0; j < 6; j ++){
@@ -343,7 +343,7 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 }
 //=====================================================================
 // input [1] =  0; [2] =  type; [3] = step; [4] = output file
-void XiXiMLL(int argc, char** argv, const int index, const int MM){
+void XiXiMLL(int argc, char** argv, const int index, const int MM, const TString file[6]){
 
 
 		ofstream out;
@@ -369,7 +369,7 @@ void XiXiMLL(int argc, char** argv, const int index, const int MM){
 						i_year.push_back(year[i]);
 				}
 		}
-		ReadData(year, index, MM);
+		ReadData(year, index, MM, file);
 //		for(int i = 0; i < years; i++){
 //				for(int j = 0; j < 2; j++){
 //						angdis[i][j]->PrintInt();
@@ -444,8 +444,19 @@ void XiXiMLL(int argc, char** argv, const int index, const int MM){
 }
 
 int main(int argc, char **argv){
+
+		std::ifstream input( "filename.ext" );
+		TString file[6];
+		int idx = 0;
+		for( std::string line; getline( input, line ); ){
+				file[idx] = line;
+				cout << file[idx] << endl;
+				idx++;
+		}
+
 	for(int i  = 0; i < 30; i++){
-		XiXiMLL(argc, argv, i, 30);
+		XiXiMLL(argc, argv, i, 30, file);
 	}
+	return 0;
 }
 
