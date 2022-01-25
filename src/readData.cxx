@@ -78,10 +78,10 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 						return NEvt;
 				}
 		}
-		if(bkg){
-				low = 0;
-				high = NEvt;
-		}
+	//	if(bkg){
+	//			low = 0;
+	//			high = NEvt;
+	//	}
 
 //		NEvt = 10000;
 		for(int i = low; i <  high; i++){
