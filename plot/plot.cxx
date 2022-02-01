@@ -17,7 +17,7 @@
  */
 
 void plot(){
-	std::ifstream input( "../run/out.txt" );
+	std::ifstream input( "../run4/out.txt" );
 	double mllv;
 	int status, nevent1, nevent2;
 	double ipara[10];
@@ -29,7 +29,12 @@ void plot(){
 	TH1D *hnom[10];
 	for(int i = 0; i< 10; i++){
 		TString name = Form("hnom%d", i+1);
-		hnom[i] = new TH1D(name, name, 10, -5, 5);
+		if(i == 1){
+		hnom[i] = new TH1D(name, name, 9, -5, 5);
+		}
+		else{
+		hnom[i] = new TH1D(name, name, 11, -5, 5);
+		}
 	}
 
 	TString title[10] = {"#alpha_{J/#psi}", 
@@ -61,7 +66,7 @@ void plot(){
 	c1->Divide(4, 3);
 	TF1* f1 = new TF1("f1", "gaus",  -5, 5);
 	for(int k = 0; k < 10; k++){
-		for(int i=0; i < 30; i++){
+		for(int i=0; i < 29; i++){
 			hnom[k]->Fill((para[k][i] - paramean[k])/paraerr[k][i]);
 		}
 		c1->cd(k+1);
