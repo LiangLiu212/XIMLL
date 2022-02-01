@@ -54,7 +54,9 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 		Double_t the, Lthe, Lphi, Lbthe, Lbphi, pthe, pphi, apthe, apphi;
 		int runNo;
 
-		TFile *f1 = new TFile(filename.Data(), "read");
+		TString infile = filename + Form("%d.root", flag);
+
+		TFile *f1 = new TFile(infile.Data(), "read");
 		TTree *t1 = (TTree*)f1->Get("xixi");
 		t1->SetBranchAddress("the", &the);
 		t1->SetBranchAddress("Lthe", &Lthe);
@@ -101,7 +103,7 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 						angdis->AddToIntegral(the, Lthe, Lphi, Lbthe, Lbphi, pthe, pphi, apthe, apphi);
 				}
 		}
-		cout << filename << ", " << type << ", " << flag << ", number : " <<   nn << endl;
+		cout << infile << ", " << type << ", " << flag << ", number : " <<   nn << endl;
 
 		NN1 = nn;
 

@@ -130,14 +130,6 @@ void ReadData(int flag[4], const int index, const int MM, const TString file[6])
 {
 		//	int years = 2;
 		const char *type[6] = {"DATA", "BKG", "PHSP", "DATA", "BKG", "PHSP"};
-		//	int flag[4] = {2009, 2012, 2018, 2019};
-	//	const char *file[6] = {
-	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root", 
-	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpm2012.root",
-	//			"/data/liul/workarea/XIXI/Rec3/phspRecpm2012.root",
-	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root",
-	//			"/data/liul/workarea/XIXI/Rec3/mdiyRecpp2012.root", 
-	//			"/data/liul/workarea/XIXI/Rec3/phspRecpp2012.root" };
 
 		for(int i = 0; i < years; i++){
 				for(int j = 0; j < 6; j ++){
