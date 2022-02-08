@@ -298,7 +298,7 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 				}
 		}
 
-		double N_BKG[4][2] = {{477.15, 448.882}, {4443, 3498}, {8827.38, 9803.34}, {8234.57, 9115.42}};
+		double N_BKG[4][2] = {{827.43333, 653.96667}, {4443, 3498}, {8827.38, 9803.34}, {8234.57, 9115.42}};
 		int idx_year = 0;
 
 		double llk = 0;
