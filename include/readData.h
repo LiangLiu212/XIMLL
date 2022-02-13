@@ -7,6 +7,6 @@
 #include <iostream>
 using namespace std;
 
-int readData(const TString filename, AngDisXiXi *ngdis, double **para, int flag, const char *type, const int index, const int MM);
+int readData(const TString filename, AngDisXiXi *ngdis, double **para, const TString flag, const char *type, const int index, const int MM);
 
 #endif // READ_DATA_H

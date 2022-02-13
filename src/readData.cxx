@@ -3,29 +3,31 @@
 #include "TString.h"
 #include "readData.h"
 
-int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag, const char *type, const int index, const int MM){
+int readData(const TString filename, AngDisXiXi *angdis, double **para, const TString flag, const char *type, const int index, const int MM){
 
 		bool phsp = false;
 		bool bkg = false;
-		if(strcmp(type, "PHSP") == 0) phsp = true;
-		if(strcmp(type, "BKG") == 0) bkg = true;
+		bool inc = false;
+		if(strcmp(type, "phsp") == 0) phsp = true;
+		if(strcmp(type, "bkg1") == 0) bkg = true;
+		if(strcmp(type, "inclusive") == 0) inc = true;
 
 		int runNo_low = 0;
 		int runNo_high = 0;
 
-		if(flag == 2009){
+		if(!flag.CompareTo("2009")){
 				runNo_low = 9800;
 				runNo_high =  11000;
 		}
-		else if(flag == 2012){
+		else if(!flag.CompareTo("2012")){
 				runNo_low = 27100;
 				runNo_high = 28400;
 		}
-		else if(flag == 2018){
+		else if(!flag.CompareTo("2018")){
 				runNo_low = 52840;
 				runNo_high = 56646;
 		}
-		else if(flag == 2019){
+		else if(!flag.CompareTo("2019")){
 				runNo_low = 56778 ;
 				runNo_high = 59115;
 		}
@@ -54,9 +56,7 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 		Double_t the, Lthe, Lphi, Lbthe, Lbphi, pthe, pphi, apthe, apphi;
 		int runNo;
 
-		TString infile = filename + Form("%d.root", flag);
-
-		TFile *f1 = new TFile(infile.Data(), "read");
+		TFile *f1 = new TFile(filename, "read");
 		TTree *t1 = (TTree*)f1->Get("xixi");
 		t1->SetBranchAddress("the", &the);
 		t1->SetBranchAddress("Lthe", &Lthe);
@@ -80,10 +80,14 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 						return NEvt;
 				}
 		}
-	//	if(bkg){
-	//			low = 0;
-	//			high = NEvt;
-	//	}
+		if(bkg){
+				low = 0;
+				high = NEvt;
+		}
+		if(inc){
+				low = 0;
+				high = NEvt;
+		}
 
 //		NEvt = 10000;
 		for(int i = low; i <  high; i++){
@@ -103,7 +107,7 @@ int readData(const TString filename, AngDisXiXi *angdis, double **para, int flag
 						angdis->AddToIntegral(the, Lthe, Lphi, Lbthe, Lbphi, pthe, pphi, apthe, apphi);
 				}
 		}
-		cout << infile << ", " << type << ", " << flag << ", number : " <<   nn << endl;
+	//	cout << infile << ", " << type << ", " << flag << ", number : " <<   nn << endl;
 
 		NN1 = nn;
 

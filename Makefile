@@ -1,16 +1,17 @@
 VPATH=src include
-CC=nvcc 
+CC=nvcc  -std=c++11
 obj_dir=obj
 bin_dir=bin
 INCLUDE_PATH=include
 GCCFLAGS= ${addprefix -I,${INCLUDE_PATH}} 
 
 ROOTFLAGS=`root-config --cflags`
-ROOTLIBS=-L/root534/lib  -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread  -lm -ldl -lMinuit -m64 -I/root534/include
+ROOTLIBS=-L${ROOTSYS}/lib  -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread  -lm -ldl -lMinuit -m64  -I${ROOTSYS}/include
 
 obj1=${obj_dir}/readData.o
 obj2=${obj_dir}/main.o
-OBJGECTS=${obj1} ${obj2}
+obj3=${obj_dir}/Amplitude.o
+OBJGECTS=${obj1} ${obj2} ${obj3}
 TARGET=${bin_dir}/MLL
 
 all : prepare ${TARGET}
@@ -19,6 +20,8 @@ ${TARGET}: ${OBJGECTS}
 ${obj2}:main.cu  
 	${CC} -c $< -o $@ ${GCCFLAGS} ${ROOTLIBS}
 ${obj1}: readData.cxx 
+	 ${CC} -c $< -o $@ ${GCCFLAGS} ${ROOTLIBS}
+${obj3}: Amplitude.cu
 	 ${CC} -c $< -o $@ ${GCCFLAGS} ${ROOTLIBS}
 
 

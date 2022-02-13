@@ -4,6 +4,7 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "AngDisXiXi.hh"
+#include "Amplitude.cuh"
 #include "TFile.h"
 #include "TTree.h"
 #include "TStyle.h"
@@ -16,6 +17,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <time.h>
 #include <fstream>
 #include <string>
 #include <cstdlib>
@@ -23,116 +25,38 @@
 #include "gpu_AngDisXiXi.hh"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <cstdlib>
+#include <getopt.h>
+#include "rootfile.h"
+#include <map>
 #define _SLOOW
 const Int_t NUM = 10000000;
-#define THREADS_PER_BLOCK 1024
-Int_t NN[4][6];
+#define THREADS_PER_BLOCK 6
+#define MATRIX_SIZE 80
+Int_t NN[4][12];
 AngDisXiXi *angdis[4][2];
-double **angdata[4][6];
-double **gpu_angdata[4][6];
+double **angdata[4][12];
+double **gpu_angdata[4][12];
+double *gpu_Matrix[4][12];
+double *gpu_amp[4][12];
+double *out_amp[4][12];
 static int years;
-int fit_flag = 0;
-int fit_step = 0;
+static int fit_flag = 0;
+static int fit_step = 0;
+static int nsample = 0;
+static int readdata_index = 0;
 
+int verbose_flag;
 std::vector<int> i_year;
+std::vector<int> idx;
 
 
-struct AA_parameter{
-	double alpha_jpsi;
-	double phi_jpsi;
-	double alpha_xi;
-	double phi_xi;
-	double alpha_xibar;
-	double phi_xibar;
-	double alpha1_lambda;
-	double alpha1_lambdabar;
-	double alpha2_lambda;
-	double alpha2_lambdabar;
-};
+void InitialMemory(rootfile *rf){
 
-
-
-__global__ void gpu_aa(double *g_xithe,
-					   double *g_lthe,
-					   double *g_lphi,
-					   double *g_lbthe,
-					   double *g_lbphi,
-					   double *g_pthe,
-					   double *g_pphi,
-					   double *g_apthe,
-					   double *g_apphi,
-					   const int g_NN,
-					   const AA_parameter g_para,
-					   AA_Matrix *g_munu,
-					   const int g_flag, double *g_eval){
-		int index = blockIdx.x * blockDim.x + threadIdx.x;
-		if(index < g_NN){
-				__shared__ double pp1[8], pp2[8];
-				pp1[0] = g_para.alpha_jpsi;
-				pp1[1] = g_para.phi_jpsi;
-				pp1[2] = g_para.alpha_xi;
-				pp1[3] = g_para.phi_xi;
-				pp1[4] = g_para.alpha_xibar;
-				pp1[5] = g_para.phi_xibar;
-				pp1[6] = g_para.alpha1_lambda;
-				pp1[7] = g_para.alpha1_lambdabar;
-				pp2[0] = g_para.alpha_jpsi;
-				pp2[1] = g_para.phi_jpsi;
-				pp2[2] = g_para.alpha_xi;
-				pp2[3] = g_para.phi_xi;
-				pp2[4] = g_para.alpha_xibar;
-				pp2[5] = g_para.phi_xibar;
-				pp2[6] = g_para.alpha2_lambda;
-				pp2[7] = g_para.alpha2_lambdabar;
-				__syncthreads();
-				if(g_flag < 2){
-						Amp(g_xithe[index], g_lthe[index], g_lphi[index], g_lbthe[index], 
-										g_lbphi[index], g_pthe[index], g_pphi[index], g_apthe[index], g_apphi[index], 
-										pp1, &g_munu[index]);
-				}
-				else {
-						Amp(g_xithe[index], g_lthe[index], g_lphi[index], g_lbthe[index], 
-										g_lbphi[index], g_pthe[index], g_pphi[index], g_apthe[index], g_apphi[index], 
-										pp2, &g_munu[index]);
-
-				}
-		//		double tep = 0;
-				g_eval[index] = 0;
-				for(int mu=0; mu<4;mu++){// Xi loop
-						for(int nu=0;nu<4;nu++){// Xibar loop
-								for(int k=0;k<4;k++){
-										for(int j=0;j<4;j++){
-												g_eval[index] +=  g_munu[index].thC[mu][nu]*
-														g_munu[index].tHa[mu][k]*g_munu[index].tHb[nu][j]*
-														g_munu[index].tHc[k][0]*g_munu[index].tHd[j][0];
-										}
-								}
-						}
-				}
-				
-	//			g_eval[index] = 1.0;
-
-
-				//	printf("C numu  0 0 : %f\n", g_munu[index].thC[0][0]);
-				//	printf("C numu  0 1 : %f\n", g_munu[index].thC[0][1]);
-				//	printf("C numu  0 2 : %f\n", g_munu[index].thC[0][2]);
-				//	printf("C numu  0 3 : %f\n", g_munu[index].thC[0][3]);
-
-
-				//		#include "amplitude.cxx"
-
-				//	printf("from gpu :  %f \n", g_eval[index]);
-		}
-}
-
-//=====================================================================
-void ReadData(int flag[4], const int index, const int MM, const TString file[6])
-{
-		//	int years = 2;
-		const char *type[6] = {"DATA", "BKG", "PHSP", "DATA", "BKG", "PHSP"};
+		nsample = rf->size()/years;
 
 		for(int i = 0; i < years; i++){
-				for(int j = 0; j < 6; j ++){
+				for(int j = 0; j < nsample; j ++){
 						angdata[i][j] = new double * [9];
 						for(int l = 0; l < 9; l++){
 								*(angdata[i][j] + l) =  new double [NUM];
@@ -148,46 +72,75 @@ void ReadData(int flag[4], const int index, const int MM, const TString file[6])
 								angdis[i][j] = new AngDisXiXi();
 						}
 				}
+}
 
+//=====================================================================
+void ReadData(rootfile *rf, const int index, const int MM)
+{
+		//	int years = 2;
 		for(int i = 0; i < years; i++){ 		// read data
-				for(int j = 0; j < 6; j ++){
-						int l = j / 3;
-						NN[i][j] =  readData(file[j], angdis[i][l], angdata[i][j], flag[i], type[j], index, MM);
+				for(int j = 0; j < nsample; j++){
+						int l = -1;
+						int n = i*nsample + j;
+						if(!rf->type(n).CompareTo("xixipm")){
+								l = 0;
+						}
+						else if(!rf->type(n).CompareTo("xixipp")){
+								l = 1;
+						}
+						NN[i][j] =  readData(rf->file(n), angdis[i][l], angdata[i][j], rf->year(n), rf->sample(n), index, MM);
+						if(rf->sample(n).CompareTo("phsp")){
+								idx.push_back(n);
+						}
 				}
 		}
 		for(int i = 0; i < years; i++){
-				for(int j = 0; j < 6; j ++){
+				for(int j = 0; j < nsample; j ++){
 						cout << "N[" << i << "][" << j << "] : " << NN[i][j] << endl;
 				}
 		}
-		double **temp_angdata[years][6]; // define a temporary array 
+
+		double **temp_angdata[years][12]; // define a temporary array 
 		for(int i = 0; i < years; i++){
-				for(int j = 0; j < 6; j ++){
+				for(int j = 0; j < nsample; j ++){
 						temp_angdata[i][j] = new double * [9];
 						for(int l = 0; l < 9; l++){
-								*(temp_angdata[i][j] + l) =  new double [NN[i][j]];
+								*(temp_angdata[i][j] + l) =  new double [NN[i][j] + THREADS_PER_BLOCK];
 								for(int k = 0; k< NN[i][j]; k ++){
 										*(*(temp_angdata[i][j] + l) + k) = *(*(angdata[i][j] + l) + k);
 								}
 						}
 				}
 		}
+		if(readdata_index == 0){
 
-
-
-		for(int i = 0; i < years; i++){    // copy data from cpu to gpu
-				for(int j = 0; j < 6; j ++){
-						int size1 = NN[i][j] *sizeof(double);
-						gpu_angdata[i][j] = new double * [9];
-						for(int l = 0; l < 9; l++){
-								cudaMalloc( (void **) &(*(gpu_angdata[i][j] + l)), size1 );
-								cudaMemcpy( *(gpu_angdata[i][j] + l), *(temp_angdata[i][j] + l), size1, cudaMemcpyHostToDevice );
-								//	for ( int k = 0; k < NN[i][j]; k++ ){
-								//			cout << "read file : " << *(*((temp_angdata[i][j]) + 0) + k) << endl;
-								//	}
+				for(int i = 0; i < years; i++){    // copy data from cpu to gpu
+						for(int j = 0; j < nsample; j ++){
+								int size1 = (NN[i][j] + THREADS_PER_BLOCK) *sizeof(double);
+								gpu_angdata[i][j] = new double * [9];
+								for(int l = 0; l < 9; l++){
+										cudaMalloc( (void **) &(*(gpu_angdata[i][j] + l)), size1 );
+										cudaMemcpy( *(gpu_angdata[i][j] + l), *(temp_angdata[i][j] + l), size1, cudaMemcpyHostToDevice );
+										delete [] *(temp_angdata[i][j] + l);
+								}
+								cudaMalloc( (void **) &gpu_Matrix[i][j], size1 * MATRIX_SIZE  );
+								cudaMalloc( (void **) &gpu_amp[i][j], size1 * MATRIX_SIZE  );
+								out_amp[i][j] = new double [NN[i][j] + THREADS_PER_BLOCK];
 						}
 				}
 		}
+		else{
+				for(int i = 0; i < years; i++){    // copy data from cpu to gpu
+						for(int j = 0; j < nsample; j ++){
+								int size1 = (NN[i][j] + THREADS_PER_BLOCK) *sizeof(double);
+								for(int l = 0; l < 9; l++){
+										cudaMemcpy( *(gpu_angdata[i][j] + l), *(temp_angdata[i][j] + l), size1, cudaMemcpyHostToDevice );
+										delete [] *(temp_angdata[i][j] + l);
+								}
+						}
+				}
+		}
+		readdata_index++;
 }
 
 
@@ -213,33 +166,17 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 		aa_para.alpha2_lambda = pp[8];
 		aa_para.alpha2_lambdabar = pp[9];
 
-		double *host_eval;
-		double *gpu_eval;
-		AA_Matrix *gpu_munu;
-		AA_Matrix *host_munu;
 
 		cudaError_t cudaStatus;
-		double loglike[4][4];
-		int idx[4] = {0, 1, 3, 4};  // data1 bgk1 data2 bkg2
+		clock_t start,end;
+		double loglike[4][12];
 		for(int i = 0; i < years; i ++){
 				angdis[i][0]->SetParameter(pp1);
 				angdis[i][1]->SetParameter(pp2);
-				for (int j = 0; j < 4; j++){
-
-						host_munu = new AA_Matrix [NN[i][idx[j]]];
-						host_eval = new double [NN[i][idx[j]]];
-						int mat_size = NN[i][idx[j]]*sizeof(*gpu_munu);
-						cudaMalloc( (void **) &gpu_munu,  mat_size);
-						int size = NN[i][idx[j]] * sizeof(*gpu_eval);
-						cudaMalloc( (void **) &gpu_eval, size);
-						cudaStatus = cudaGetLastError();
-						if (cudaStatus != cudaSuccess){
-								cerr << "failure to call cuda kernel 003!" << endl;
-								exit(1);
-						}
-
-
-						gpu_aa <<< (NN[i][idx[j]] + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >>> ( 
+				for (int j = 0; j < (nsample - 2); j++){
+						int flag = j / ((nsample - 2) / 2);
+						start = clock();
+						gpu_Amp <<< (NN[i][idx[j]] * MATRIX_SIZE + MATRIX_SIZE * THREADS_PER_BLOCK ) / (MATRIX_SIZE * THREADS_PER_BLOCK), MATRIX_SIZE * THREADS_PER_BLOCK >>> ( 
 										*(gpu_angdata[i][idx[j]] + 0), 
 										*(gpu_angdata[i][idx[j]] + 1), 
 										*(gpu_angdata[i][idx[j]] + 2), 
@@ -248,25 +185,22 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 										*(gpu_angdata[i][idx[j]] + 5), 
 										*(gpu_angdata[i][idx[j]] + 6), 
 										*(gpu_angdata[i][idx[j]] + 7), 
-										*(gpu_angdata[i][idx[j]] + 8), 
-										NN[i][idx[j]], 
-										aa_para, gpu_munu, j, gpu_eval);
+										*(gpu_angdata[i][idx[j]] + 8),
+										gpu_amp[i][idx[j]],
+										(NN[i][idx[j]] + THREADS_PER_BLOCK)*80, 
+										aa_para, flag, gpu_Matrix[i][idx[j]]);
+						cudaDeviceSynchronize(); // wait until prior kernel is finished
+						end = clock();
+					//	double time3 = ((double)(end-start))/CLOCKS_PER_SEC;
+					//	cout << "GPU 3: running kernel " << time3 << " seconds" << endl;
 						cudaStatus = cudaGetLastError();
 						if (cudaStatus != cudaSuccess){
 								cerr << "failure to call cuda kernel 004!" << endl;
 								exit(1);
 						}
 
-						cudaDeviceSynchronize();
-						cudaStatus = cudaGetLastError();
-						if (cudaStatus != cudaSuccess){
-								cerr << "failure to call cuda kernel 001!" << endl;
-								exit(1);
-						}
-						cudaMemcpy( host_munu, gpu_munu, mat_size, cudaMemcpyDeviceToHost );
-						cudaMemcpy( host_eval, gpu_eval, size, cudaMemcpyDeviceToHost );
-						cudaFree( gpu_munu );
-						cudaFree( gpu_eval );
+						int mat_size = (NN[i][idx[j]] + THREADS_PER_BLOCK) *sizeof(double);
+						cudaMemcpy( out_amp[i][idx[j]], gpu_amp[i][idx[j]], mat_size, cudaMemcpyDeviceToHost );
 						cudaStatus = cudaGetLastError();
 						if (cudaStatus != cudaSuccess){
 								cerr << "failure to call cuda kernel 002!" << endl;
@@ -275,26 +209,17 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 						loglike[i][j] = 0;
 						for(int evt = 0; evt < NN[i][idx[j]]; evt++){
 								//	cout << "host C munu 0: " << 	*(host_eval + evt) << endl;
-								if(*(host_eval + evt) <= 0){ f=0; cout << "data : " << *(host_eval + evt) << endl;  return; }
-								loglike[i][j] += TMath::Log(*(host_eval + evt));
-								//	cout << "host C munu 1: " << 	(host_munu + evt)->tHa[0][1] << endl;
-								//	cout << "host C munu 2: " << 	(host_munu + evt)->tHa[0][2] << endl;
-								//	cout << "host C munu 3: " << 	(host_munu + evt)->tHa[0][3] << endl;
+								if(*(out_amp[i][idx[j]] + evt) <= 0){ f=0; cout << "data : " << *(out_amp[i][idx[j]] + evt) << endl;  return; }
+								loglike[i][j] += TMath::Log(*(out_amp[i][idx[j]] + evt));
 						}
-						delete [] host_munu;
-						host_munu = NULL;
-						delete [] host_eval;
-						host_eval = NULL;
 				}
 		}
-	//	exit(1);
-
+		//	exit(1);
 		double norm[4][2];
 		for (int i = 0; i < years; i++){
 				for (int j = 0; j < 2; j++){
 						norm[i][j] = 0;
 						norm[i][j] = angdis[i][j]->CalcToIntegral();
-						norm[i][j]/=Double_t(NN[i][3*j + 2]);
 				}
 		}
 
@@ -310,14 +235,19 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 				if(i_year[i] == 2012) idx_year = 1;
 				if(i_year[i] == 2018) idx_year = 2;
 				if(i_year[i] == 2019) idx_year = 3;
-			//	cout <<  i_year[i] <<  "  Background  : "  << N_BKG[idx_year][0] << " " << N_BKG[idx_year][1] << endl;
-				if(fit_flag == 1){
-						l1 = - loglike[i][0] + N_BKG[idx_year][0]*loglike[i][1]/Double_t(NN[i][1]) + (Double_t(NN[i][0]) - N_BKG[idx_year][0])*TMath::Log(norm[i][0]);
-						l2 = - loglike[i][2] + N_BKG[idx_year][1]*loglike[i][3]/Double_t(NN[i][4]) + (Double_t(NN[i][3]) - N_BKG[idx_year][1])*TMath::Log(norm[i][1]);
+				//	cout <<  i_year[i] <<  "  Background  : "  << N_BKG[idx_year][0] << " " << N_BKG[idx_year][1] << endl;
+				if(nsample == 6){
+				//		cout << loglike[i][0] << "  " << loglike[i][1] << "  " << loglike[i][2] << "  " << loglike[i][3] << endl;
+						l1 = - loglike[i][0] + N_BKG[idx_year][0]*loglike[i][1]/Double_t(NN[i][1]) + (Double_t(NN[i][0]) - N_BKG[idx_year][0])*TMath::Log(norm[i][0]/Double_t(NN[i][2]));
+						l2 = - loglike[i][2] + N_BKG[idx_year][1]*loglike[i][3]/Double_t(NN[i][4]) + (Double_t(NN[i][3]) - N_BKG[idx_year][1])*TMath::Log(norm[i][1]/Double_t(NN[i][5]));
 				}
-				else if(fit_flag == 2){
-						l1 = - loglike[i][0] + (Double_t(NN[i][0]))*TMath::Log(norm[i][0]);
-						l2 = - loglike[i][2] + (Double_t(NN[i][3]))*TMath::Log(norm[i][1]);
+				else if(nsample == 4){
+						l1 = - loglike[i][0] + (Double_t(NN[i][0]))*TMath::Log(norm[i][0]/NN[i][1]);
+						l2 = - loglike[i][2] + (Double_t(NN[i][3]))*TMath::Log(norm[i][1]/NN[i][3]);
+				}
+				else if(nsample == 8){
+						l1 = - loglike[i][0] - loglike[i][1] + N_BKG[idx_year][0]*loglike[i][2]/Double_t(NN[i][2]) + (Double_t(NN[i][0]) + NN[i][1] - N_BKG[idx_year][0])*TMath::Log(norm[i][0]/Double_t(NN[i][3]));
+						l2 = - loglike[i][3] - loglike[i][4] + N_BKG[idx_year][1]*loglike[i][5]/Double_t(NN[i][6]) + (Double_t(NN[i][4]) + NN[i][5] - N_BKG[idx_year][1])*TMath::Log(norm[i][1]/Double_t(NN[i][7]));
 				}
 				else{
 						cerr << "error fit_flag!" << endl;
@@ -327,50 +257,27 @@ void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 
 		f = llk;
 		if(fit_step%100 == 0){
-		std::cout << "Loglike: " << f << std::endl; 
-		for( int i = 0; i<10 ; i++ ) cout<<pp[i]<<" ";
-		cout << endl;
+				std::cout << "Loglike: " << f << std::endl; 
+				for( int i = 0; i<10 ; i++ ) cout<<pp[i]<<" ";
+				cout << endl;
 		}
 		fit_step++;
 }
 //=====================================================================
 // input [1] =  0; [2] =  type; [3] = step; [4] = output file
-void XiXiMLL(int argc, char** argv, const int index, const int MM, const TString file[6]){
+void XiXiMLL(rootfile *rf, int index, int MM){
 
 
 		ofstream out;
-		TString outfile_name = argv[1];
+		TString outfile_name = "out.txt";
 		cout << outfile_name << endl;
 		out.open(outfile_name, ios::out | ios::app);
-		int year[4];
-		fit_flag = atoi(argv[2]);
-		if(argc < 4 || argc > 7){
-				cerr << "wrong arguments!" << endl;
-				exit(1);
-		}
-		cout << "OK 11111111111" << endl;
-		i_year.clear();
-		if(argc >= 4 && argc <= 7){
-				years = argc - 3;
-				for(int i = 0; i < years; i++){
-						year[i] = atoi(argv[i+3]);
-						if(year[i] != 2009 &&  year[i] != 2012 && year[i] != 2018 && year[i] != 2019 ){
-								cerr << "wrong data sets : " << year[i] << endl;
-								exit(1);
-						}
-						i_year.push_back(year[i]);
-				}
-		}
-		ReadData(year, index, MM, file);
-//		for(int i = 0; i < years; i++){
-//				for(int j = 0; j < 2; j++){
-//						angdis[i][j]->PrintInt();
-//				}
-//		}
+
+		ReadData(rf, index, MM);
+
+
+
 		cout << "OK 11111111113" << endl;
-		// instantiating the values to be measured 
-		//
-		// initial values for fit
 		double Jpsi_alpha       = 0.586;  	  // alpha_J/Psi 
 		double Jpsi_phi       =  1.121;		  //-TMath::Pi()/4.; // relative phase, Dphi_J/Psi
 		double xi_alpha     = -0.3756;  		  // alpha (Sgm->p pi0)
@@ -432,23 +339,226 @@ void XiXiMLL(int argc, char** argv, const int index, const int MM, const TString
 		out << res[6]<< "," << err_res[6] << "," << res[7]<< "," << err_res[7]<< ",";
 		out << res[8]<< "," << err_res[8] << "," << res[9]<< "," << err_res[9]<< endl;
 		out.close();
-	//	return 0;
+		//	return 0;
 }
 
 int main(int argc, char **argv){
 
-		std::ifstream input( "filename.ext" );
-		TString file[6];
-		int idx = 0;
-		for( std::string line; getline( input, line ); ){
-				file[idx] = line;
-				cout << file[idx] << endl;
-				idx++;
+		int c;
+		int m_command;
+		vector<TString> m_year;
+		TString m_bkg;
+		TString m_inclusive;
+		TString m_version;
+
+		fit_flag = 2;
+
+		while (1)
+		{
+				static struct option long_options[] =
+				{
+						/* These options set a flag. */
+						{"data", no_argument,       0, 'd'},
+						{"iocheck",   no_argument,       0, 0},
+						{"inclusive",   no_argument,       0, 3},
+						/* These options don’t set a flag.
+						   We distinguish them by their indices. */
+						{"bkg1",     no_argument,       0, 1},
+						{"bkg2",  no_argument,       0, 2},
+						{"version",  required_argument, 0, 'v'},
+						{"mix",  no_argument, 0, 'm'},
+						{"year",    required_argument, 0, 'y'},
+						{0, 0, 0, 0}
+				};
+				/* getopt_long stores the option index here. */
+				int option_index = 0;
+
+				c = getopt_long (argc, argv, "dv:my:",
+								long_options, &option_index);
+
+				/* Detect the end of the options. */
+				if (c == -1)
+						break;
+
+				switch (c)
+				{
+						case 'd':
+								m_command = 0;
+								break;
+						case 0:
+								m_command = 1;
+								puts ("option -a\n");
+								break;
+
+						case 3: 
+								m_inclusive = "inclusive";
+								break;
+						case 1:
+								m_bkg = "bkg1";
+								fit_flag = 1;
+								puts ("option -b\n");
+								break;
+
+						case 2:
+								m_bkg = "bkg2";
+								fit_flag = 1;
+								break;
+
+						case 'v':
+								m_version = optarg;
+								printf ("option -d with value `%s'\n", optarg);
+								break;
+						case 'y':
+								m_year.push_back(optarg);
+								i_year.push_back(atoi(optarg));
+
+								printf ("option -i with value `%s'\n", optarg);
+								while (optind < argc && argv[optind][0] != '-'){
+										m_year.push_back(argv[optind]);
+										i_year.push_back(atoi(argv[optind]));
+										optind++;
+								}
+
+								printf ("option -d with value `%s'\n", optarg);
+								break;
+
+						case 'm':
+								break;
+
+						case '?':
+
+								/* getopt_long already printed an error message. */
+								break;
+
+						default:
+								abort ();
+				}
 		}
 
-	for(int i  = 0; i < 30; i++){
-		XiXiMLL(argc, argv, i, 30, file);
-	}
-	return 0;
+		/* Instead of reporting ‘--verbose’
+		   and ‘--brief’ as they are encountered,
+		   we report the final status resulting from them. */
+		if (verbose_flag)
+				puts ("verbose flag is set");
+
+		/* Print any remaining command line arguments (not options). */
+		if (optind < argc)
+		{
+				printf ("non-option ARGV-elements: ");
+				while (optind < argc)
+						printf ("%s ", argv[optind++]);
+				putchar ('\n');
+		}
+
+
+
+		map<TString, TString> files;
+		rootfile *rf = new rootfile();
+		switch (m_command){
+				case 0: {
+						}
+				case 1: {
+								TString path = "/data/liul/workarea/XIXI/fit/boost";
+								TString infile;
+								TString type;
+								years = m_year.size();
+								for(int i = 0; i < m_year.size(); i++){
+										infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+										type = "mdiy";
+										rf->Setfile(infile);
+										rf->Setyear(m_year[i]);
+										rf->Setsample(type);
+										rf->Settype(Form("xixipm"));
+										files.insert(make_pair(infile, type));
+										if(!m_inclusive.CompareTo("inclusive")){
+												infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "inclusive/inclusive.root";
+												type = "inclusive";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipm"));
+										}
+										if(!m_bkg.CompareTo("bkg1")){
+												infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "bkg1/bkg30x.root";
+												type = "bkg1";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipm"));
+										}
+										else if(!m_bkg.CompareTo("bkg2")){
+												infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "bkg2/bkg30x.root";
+												type = "bkg2";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipm"));
+										}
+										infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "phsp/phsp30x.root";
+										type = "phsp";
+										files.insert(make_pair(infile, type));
+										rf->Setfile(infile);
+										rf->Setyear(m_year[i]);
+										rf->Setsample(type);
+										rf->Settype(Form("xixipm"));
+
+										infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+										type = "mdiy";
+										files.insert(make_pair(infile, type));
+										rf->Setfile(infile);
+										rf->Setyear(m_year[i]);
+										rf->Setsample(type);
+										rf->Settype(Form("xixipp"));
+										if(!m_inclusive.CompareTo("inclusive")){
+												infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "inclusive/inclusive.root";
+												type = "inclusive";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipm"));
+										}
+										if(!m_bkg.CompareTo("bkg1")){
+												infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + m_bkg +  "/bkg30x.root";
+												type = "bkg1";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipp"));
+										}
+										else if(!m_bkg.CompareTo("bkg2")){
+												infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + m_bkg+ "/bkg30x.root";
+												type = "bkg2";
+												files.insert(make_pair(infile, type));
+												rf->Setfile(infile);
+												rf->Setyear(m_year[i]);
+												rf->Setsample(type);
+												rf->Settype(Form("xixipp"));
+										}
+										infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "phsp/phsp30x.root";
+										type = "phsp";
+										files.insert(make_pair(infile, type));
+										rf->Setfile(infile);
+										rf->Setyear(m_year[i]);
+										rf->Setsample(type);
+										rf->Settype(Form("xixipp"));
+								}
+
+						}
+		}
+		for(int i  = 0; i < rf->size(); i++){
+				cout << rf->file(i) << " => " << rf->year(i) << '\n';
+		}
+		cout << endl;
+		InitialMemory(rf);
+
+		for(int i  = 0; i < 30; i++){
+				XiXiMLL(rf, i, 30);
+		}
+		return 0;
 }
 
