@@ -12,6 +12,8 @@ class AngDisXiXi {
 
 				AngDisXiXi(){
 						isPHSPinte = false;
+						datamass = new double [1000000];
+						mdiymass = new double [1000000];
 				}   
 
 				~AngDisXiXi() {}
@@ -130,12 +132,29 @@ class AngDisXiXi {
 						p_Lbar_alpha=pp[7];
 				}
 
-
-
-
+				 void setDataMass(int i, double mass){
+						 datamass[i] = mass;
+						 Ndata = i;
+				 }
+				 void setMCMass(int i, double mass){
+						 mdiymass[i] = mass;
+						 Nmdiy = i;
+				 }
+				 double DataMass(int n){
+						 return datamass[n];
+				 }
+				 double MCMass(int n){
+						 return mdiymass[n];
+				 }
+				 int getNdata(){
+						 return Ndata+1;
+				 }
+				 int getNmc(){
+						 return Nmdiy+1;
+				 }
 
 		private:
-				 bool isPHSPinte;
+				bool isPHSPinte;
 				double  p_Jpsi_alpha;
 				double 	p_Jpsi_phi;
 				double 	p_Xi_alpha;
@@ -144,6 +163,11 @@ class AngDisXiXi {
 				double  p_Xibar_phi;
 				double  p_L_alpha;
 				double  p_Lbar_alpha;
+
 				double atoInt[2048];
+				double *datamass;
+				double *mdiymass;
+				int Ndata;
+				int Nmdiy;
 };
 #endif // MN_AngDisSsS_H_
