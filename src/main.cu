@@ -353,10 +353,22 @@ int main(int argc, char **argv){
 												rf->Setversion(m_version);
 										}
 								}
-								break;
 
+								for(int i  = 0; i < rf->size(); i++){
+										cout << rf->file(i) << " => " << rf->year(i) << '\n';
+								}
+								cout << endl;
+								rf->InitialMemory();
+								for(int i  = 0; i < 30; i++){
+										rf->IOReadData(i, 30);
+									//	rf->MassFit();
+										XiXiMLL(i, 30);
+										rf->FreeMemory();
+								}
+								break;
 						}
 		}
+/*
 		for(int i  = 0; i < rf->size(); i++){
 				cout << rf->file(i) << " => " << rf->year(i) << '\n';
 		}
@@ -364,16 +376,12 @@ int main(int argc, char **argv){
 		rf->InitialMemory();
 		for(int i  = 0; i < 30; i++){
 				rf->IOReadData(i, 30);
-		//		rf->MassFit();
-				XiXiMLL(i, 30);
+				rf->MassFit();
+				//		XiXiMLL(i, 30);
 				rf->FreeMemory();
 		}
+*/
 
-	//	InitialMemory(rf);
-
-	//	for(int i  = 0; i < 30; i++){
-	//			XiXiMLL(rf, i, 30);
-	//	}
 		return 0;
 }
 

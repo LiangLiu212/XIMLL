@@ -81,7 +81,10 @@ class rootfile {
 						cut_mn2 = 0.955;
 						cut_mn1 = 0.925;
 						fit_step=0;
-
+						double tmpNBKG[4][2] = {{861.395, 657.348}, {4425.12, 3421.47}, {0, 0}, {0, 0}};
+						for(int i = 0; i < 4; i++)
+								for(int j =0; j < 2; j++)
+										NBKG[i][j] = tmpNBKG[i][j];
 				}
 				void Setfile(TString str) { m_file.push_back(str);}
 				void Setyear(TString str) { m_year.push_back(str);}
