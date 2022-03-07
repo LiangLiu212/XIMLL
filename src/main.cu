@@ -12,6 +12,7 @@
 #include "TVectorT.h"
 #include "TStopwatch.h"
 #include "TMath.h"
+#include "myMinuit.h"
 #include <TMinuit.h>
 #include <vector>
 #include <iostream>
@@ -66,7 +67,8 @@ void XiXiMLL(int index, int MM){
 		cout << "OK" << endl;
 		// cout << argv[1] << endl;
 		// fit nr is used to tell which analysis cuts that are used
-		TMinuit *minuit=new TMinuit(10);
+		myMinuit *minuit=new myMinuit(10);
+	//	minuit->setRandomSeed(3423);
 		Int_t ierflag=0; 
 		Double_t arglist[100];
 		cout << "OK 11111111111" << endl;
@@ -125,6 +127,7 @@ int main(int argc, char **argv){
 		vector<TString> m_namesample; 		// 
 		TString m_version;
 
+		rf = new rootfile();
 
 		while (1)
 		{
@@ -147,6 +150,16 @@ int main(int argc, char **argv){
 
 						{"year",    required_argument, 0, 'y'},
 						{"type",    required_argument, 0, 't'},
+						{"cutXiDL",    required_argument, 0, 4},
+						{"cutLmdDL",    required_argument, 0, 5},
+						{"cutXiCosTheta",    required_argument, 0, 6},
+						{"cutmXi",    required_argument, 0, 7},
+						{"cutmLmd",    required_argument, 0, 8},
+						{"cutchi2kmf",    required_argument, 0, 9},
+						{"cutchi2Xi",    required_argument, 0, 10},
+						{"cutchi2Lmd",    required_argument, 0, 11},
+						{"cutmn1",    required_argument, 0, 12},
+						{"cutmn2",    required_argument, 0, 13},
 						{0, 0, 0, 0}
 				};
 				/* getopt_long stores the option index here. */
@@ -202,6 +215,36 @@ int main(int argc, char **argv){
 
 								printf ("option -d with value `%s'\n", optarg);
 								break;
+						case 4: 
+								cout << "setCutXiDL" << endl;
+								rf->setCutXiDL(atof(optarg)); break;
+						case 5: 
+								cout << "setCutLmdDL" << endl;
+								rf->setCutLmdDL(atof(optarg)); break;
+						case 6: 
+								cout << "setCutXiCosTheta" << endl;
+								rf->setCutXiCosTheta(atof(optarg)); break;
+						case 7: 
+								cout << "setCutmXi" << endl;
+								rf->setCutmXi(atof(optarg)); break;
+						case 8: 
+								cout << "setCutmLmd" << endl;
+								rf->setCutmLmd(atof(optarg)); break;
+						case 9: 
+								cout << "setCutchi2kmf" << endl;
+								rf->setCutchi2kmf(atof(optarg)); break;
+						case 10: 
+								cout << "setCutchi2Xi" << endl;
+								rf->setCutchi2Xi(atof(optarg)); break;
+						case 11: 
+								cout << "setCutchi2Lmd" << endl;
+								rf->setCutchi2Lmd(atof(optarg)); break;
+						case 12: 
+								cout << "setCutmn1" << endl;
+								rf->setCutmn1(atof(optarg)); break;
+						case 13: 
+								cout << "setCutmn2" << endl;
+								rf->setCutmn2(atof(optarg)); break;
 
 						case 'm':
 								break;
@@ -233,7 +276,6 @@ int main(int argc, char **argv){
 
 
 
-		rf = new rootfile();
 		rf->SetNyear(m_year.size());
 
 		TString path = "/data/liul/workarea/XIXI/fit/boost";
@@ -293,6 +335,18 @@ int main(int argc, char **argv){
 												rf->Setversion(m_version);
 										}
 								}
+
+								for(int i  = 0; i < rf->size(); i++){
+										cout << rf->file(i) << " => " << rf->year(i) << '\n';
+								}
+								cout << endl;
+								rf->InitialMemory();
+								rf->ReadData(1, 30);
+								rf->MassFit();
+								XiXiMLL(1, 30);
+								rf->FreeMemory();
+
+
 								break;
 
 
@@ -368,20 +422,20 @@ int main(int argc, char **argv){
 								break;
 						}
 		}
-/*
-		for(int i  = 0; i < rf->size(); i++){
-				cout << rf->file(i) << " => " << rf->year(i) << '\n';
-		}
-		cout << endl;
-		rf->InitialMemory();
-		for(int i  = 0; i < 30; i++){
-				rf->IOReadData(i, 30);
-				rf->MassFit();
-				//		XiXiMLL(i, 30);
-				rf->FreeMemory();
-		}
-*/
+		/*
+		   for(int i  = 0; i < rf->size(); i++){
+		   cout << rf->file(i) << " => " << rf->year(i) << '\n';
+		   }
+		   cout << endl;
+		   rf->InitialMemory();
+		   for(int i  = 0; i < 30; i++){
+		   rf->IOReadData(i, 30);
+		   rf->MassFit();
+//		XiXiMLL(i, 30);
+rf->FreeMemory();
+}
+		 */
 
-		return 0;
+return 0;
 }
 

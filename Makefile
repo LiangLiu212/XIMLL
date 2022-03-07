@@ -6,7 +6,12 @@ INCLUDE_PATH=include
 GCCFLAGS= ${addprefix -I,${INCLUDE_PATH}} 
 
 ROOTFLAGS=`root-config --cflags`
-ROOTLIBS=-L${ROOTSYS}/lib  -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread  -lm -ldl -lMinuit -m64  -I${ROOTSYS}/include  -lRooFit -lRooFitCore
+ROOTLIBS=-L${ROOTSYS}/lib  -lCore -lRIO -lNet -lHist \
+			-lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript \
+			-lMatrix -lPhysics -lMathCore -lThread  -lm -ldl -lMinuit -m64  -I${ROOTSYS}/include \
+					-lRooFit -lRooFitCore -w \
+					-L /home/liul/software/myMinuit -I /home/liul/software/myMinuit \
+					-lmyMinuit
 
 obj1=${obj_dir}/rootfile.o
 obj2=${obj_dir}/main.o

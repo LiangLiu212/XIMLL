@@ -86,6 +86,17 @@ class rootfile {
 								for(int j =0; j < 2; j++)
 										NBKG[i][j] = tmpNBKG[i][j];
 				}
+				void setCutXiDL(const double cut) {cut_XiDL = cut;}
+				void setCutLmdDL(const double cut) {cut_LmdDL = cut;}
+				void setCutXiCosTheta(const double cut) {cut_XiCosTheta = cut;}
+				void setCutmXi(const double cut) {cut_mXi = cut;}
+				void setCutmLmd(const double cut) {cut_mLmd1 = cut;}
+				void setCutchi2kmf(const double cut) {cut_chi2kmf = cut;}
+				void setCutchi2Xi(const double cut) {cut_chi2Xi = cut;}
+				void setCutchi2Lmd(const double cut) {cut_chi2Lmd = cut;}
+				void setCutmn1(const double cut) {cut_mn1 = cut;}
+				void setCutmn2(const double cut) {cut_mn2 = cut;}
+
 				void Setfile(TString str) { m_file.push_back(str);}
 				void Setyear(TString str) { m_year.push_back(str);}
 				void Settype(TString str) { m_type.push_back(str);}

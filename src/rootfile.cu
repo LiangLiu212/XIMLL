@@ -302,8 +302,8 @@ double rootfile::massFit(const int iyear, const int itype){
 		}
 
 
-		RooRealVar mean2("mean2", "mean2", 0.001, -0.05, 0.05);	
-		RooRealVar sigma2("sigma2", "sigma2",0.001, 0, 0.05);
+		RooRealVar mean2("mean2", "mean2", 0.005, -0.05, 0.05);	
+		RooRealVar sigma2("sigma2", "sigma2",0.005, 0, 0.05);
 		RooGaussian ga1("ga1", "ga1", mn, mean2, sigma2);
 		mn.setBins(10000, "cache");
 		RooFFTConvPdf shape("shape", "shape", mn, keysshape, ga1);
@@ -313,8 +313,8 @@ double rootfile::massFit(const int iyear, const int itype){
 		RooRealVar k("k", "k", -10, -50, -1.0);
 		RooArgusBG argus("argus", "argus", mn, m0, k);
 
-		RooRealVar fra1("fra1", "fra1", dataNevt*1.55, 0, 20000000);
-		RooRealVar fra2("fra2", "fra2", dataNevt*0.5, 0, 20000000);
+		RooRealVar fra1("fra1", "fra1", dataNevt*100.85, 0, 20000000);
+		RooRealVar fra2("fra2", "fra2", dataNevt*10.4, 0, 20000000);
 		RooAddPdf sum("sum", "sig+bak", RooArgList(shape, argus), RooArgList(fra1, fra2));
 
 		RooFitResult *res = sum.fitTo(data, "r", Extended(), Save(1));
@@ -437,12 +437,13 @@ double rootfile::fcnmll(double *pp){
 				l2 = - loglike[i][4] + NBKG[i][1]*loglike[i][7]/Double_t(NN[i][7]) + (Double_t(NN[i][4]) - NBKG[i][1])*TMath::Log(norm[i][1]/Double_t(NN[i][6]));
 				llk += (l1 + l2);
 		}
-
+/*
 		if(fit_step%100 == 0){
 				std::cout << "Loglike: " << llk << std::endl; 
 				for( int i = 0; i<10 ; i++ ) cout<<pp[i]<<" ";
 				cout << endl;
 		}
+		*/
 		fit_step++;
 		return llk;
 
@@ -639,8 +640,8 @@ int rootfile::IOreadData(const int n, AngDisXiXi *ang, double **para, const int 
 				if(mdiy){
 						ang->setDataMass(count1, m_mn);
 						count1++;
-					//	if(m_angle_gam1 > 0.3) continue;
-					//	if(m_angle_gam2 > 0.3) continue;
+						if(m_angle_gam1 > 0.3) continue;
+						if(m_angle_gam2 > 0.3) continue;
 						if(m_angle_gam1 < 0.3 && m_angle_gam2 < 0.3){
 								ang->setMCMass(count2, m_mn);
 								count2++;
@@ -797,10 +798,10 @@ double rootfile::IOfcnmll(double *pp){
 				//	cout << loglike[i][0] << "		" << loglike[i][2] << "		" << loglike[i][3] << "		" << loglike[i][5] << endl;
 				//	l1 = - loglike[i][0] + NBKG[i][0]*loglike[i][3]/Double_t(NN[i][3]) + (Double_t(NN[i][0]) - NBKG[i][0])*TMath::Log(loglike[i][2]/Double_t(NN[i][2]));
 				//	l2 = - loglike[i][4] + NBKG[i][1]*loglike[i][7]/Double_t(NN[i][7]) + (Double_t(NN[i][4]) - NBKG[i][1])*TMath::Log(loglike[i][6]/Double_t(NN[i][6]));
-					l1 = - loglike[i][0] + NBKG[i][0]*loglike[i][2]/Double_t(NN[i][2]) + (Double_t(NN[i][0]) - NBKG[i][0])*TMath::Log(norm[i][0]/Double_t(NN[i][1]));
-					l2 = - loglike[i][3] + NBKG[i][1]*loglike[i][5]/Double_t(NN[i][5]) + (Double_t(NN[i][3]) - NBKG[i][1])*TMath::Log(norm[i][1]/Double_t(NN[i][4]));
-			//	l1 = - loglike[i][0]  + (Double_t(NN[i][0]))*TMath::Log(norm[i][0]/Double_t(NN[i][1]));
-			//	l2 = - loglike[i][3]  + (Double_t(NN[i][3]))*TMath::Log(norm[i][1]/Double_t(NN[i][4]));
+				//	l1 = - loglike[i][0] + NBKG[i][0]*loglike[i][2]/Double_t(NN[i][2]) + (Double_t(NN[i][0]) - NBKG[i][0])*TMath::Log(norm[i][0]/Double_t(NN[i][1]));
+				//	l2 = - loglike[i][3] + NBKG[i][1]*loglike[i][5]/Double_t(NN[i][5]) + (Double_t(NN[i][3]) - NBKG[i][1])*TMath::Log(norm[i][1]/Double_t(NN[i][4]));
+				l1 = - loglike[i][0]  + (Double_t(NN[i][0]))*TMath::Log(norm[i][0]/Double_t(NN[i][1]));
+				l2 = - loglike[i][3]  + (Double_t(NN[i][3]))*TMath::Log(norm[i][1]/Double_t(NN[i][4]));
 				llk += (l1 + l2);
 		}
 
