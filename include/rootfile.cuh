@@ -5,7 +5,7 @@
 #include "TApplication.h"
 #include "TH1F.h"
 #include "TString.h"
-#include "TF1.h"
+//#include "TF1.h"
 #include "TChain.h"
 #include "TGraph.h"
 #include "TCanvas.h"
@@ -81,7 +81,7 @@ class rootfile {
 						cut_mn2 = 0.955;
 						cut_mn1 = 0.925;
 						fit_step=0;
-						double tmpNBKG[4][2] = {{861.395, 657.348}, {4425.12, 3421.47}, {0, 0}, {0, 0}};
+						double tmpNBKG[4][2] = {{861.385, 657.545}, {4425.2, 3421.11}, {16359.6, 12720.5}, {16589.0, 12382.8}};
 						for(int i = 0; i < 4; i++)
 								for(int j =0; j < 2; j++)
 										NBKG[i][j] = tmpNBKG[i][j];
@@ -104,6 +104,20 @@ class rootfile {
 				void Setversion(TString str) { m_version.push_back(str);}
 				void SetNyear(const int nyear) {m_nyear = nyear;}
 				TString year(int n) { return m_year[n];}
+				int iyear(const int n){
+						if(!m_year[n].CompareTo("2009")){
+								return 0;
+						}
+						else if(!m_year[n].CompareTo("2012")){
+								return 1;
+						}
+						else if(!m_year[n].CompareTo("2018")){
+								return 2;
+						}
+						else if(!m_year[n].CompareTo("2019")){
+								return 3;
+						}
+				}
 				TString file(int n) { return m_file[n];}
 				TString type(int n) { return m_type[n];}
 				TString sample(int n) {return m_sample[n];}
@@ -115,9 +129,13 @@ class rootfile {
 				void FreeMemory();
 				void ReadData(const int index, const int MM);
 				void IOReadData(const int index, const int MM);
-				void MassFit();
+				void MassFit(const int index, const TString m_outfile);
 				double IOfcnmll(double *pp);
 				double fcnmll(double *pp);
+				void SetNorm(const TString norm){
+						m_norm = norm;
+				}
+				void readBKG(const int index);
 		private:
 				int fit_step;
 				vector<TString> m_file;
@@ -125,6 +143,7 @@ class rootfile {
 				vector<TString> m_type;
 				vector<TString> m_sample;
 				vector<TString> m_version;
+				TString m_norm;
 				int m_nyear;
 				int nsample;
 				Int_t NUM;
@@ -138,6 +157,7 @@ class rootfile {
 				double *gpu_amp[4][20];
 				double *out_amp[4][20];
 				double NBKG[4][2];
+				int nBkg[4][2];
 				int IOreadData(const int n, AngDisXiXi *ang, double **para, const int  index, const int MM);
 				int readData(const int n, AngDisXiXi *ang, double **para, const int  index, const int MM);
 				double massFit(const int iyear, const int itype);

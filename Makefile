@@ -1,5 +1,5 @@
 VPATH=src include
-CC=nvcc  -std=c++11
+CC=nvcc  
 obj_dir=obj
 bin_dir=bin
 INCLUDE_PATH=include

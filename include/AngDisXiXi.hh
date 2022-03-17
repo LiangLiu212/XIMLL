@@ -46,11 +46,46 @@ class AngDisXiXi {
 						for (int i =0 ; i < 2048; i ++){
 								 atoInt[i] = 0;
 						}
+				}
 
-
+				void InitialIntmDIY(){
+						for (int i =0 ; i < 2048; i ++){
+								 atoIntmDIY[i] = 0;
+						}
 				}
 
 				bool isphspintegral(){return isPHSPinte;};
+
+				void AddToIntegralmDIY( double theta, double LThe,double LPhi,double LbThe, double LbPhi,double pThe,double pPhi, double apThe, double apPhi){
+						isPHSPinte =true;
+
+						double amp =  Amp(theta, LThe, LPhi, LbThe, LbPhi, pThe, pPhi, apThe, apPhi);
+
+						AAProd1212 prod(1, 1, theta, 1);
+						AADecay12 Xi(1, 1, LThe, LPhi, 1);
+						AADecay12 Xibar(1, 1, LbThe, LbPhi, 1);
+						AADecay12 L(1, 0, pThe, pPhi, 1);
+						AADecay12 Lbar(1, 0, apThe, apPhi, 1);
+
+						for(int mu=0; mu<4;mu++){// Xi loop
+								for(int nu=0;nu<4;nu++){// Xibar loop
+										for(int k=0;k<4;k++){
+												for(int j=0;j<4;j++){
+														for(int c1 = 0; c1< 2; c1++){
+																for(int c2 = 0; c2 < 2; c2++){
+																		for(int c3 = 0; c3 < 2; c3++){
+																				Int_t idx = mu*512 + nu*128 + k*32 +j*8 + c1*4 + c2*2 + c3;
+																				atoIntmDIY[idx]+=prod.C1(mu, nu, c1)*
+																						Xi.Ab(mu,k, c2)*Xibar.Ab(nu, j, c3)*
+																						L.Ab(k,0, 0)*Lbar.Ab(j, 0, 0)/amp;
+																		}
+																}
+														}
+												}
+										}
+								}
+						}
+				}
 
 
 				void AddToIntegral( double theta, double LThe,double LPhi,double LbThe, double LbPhi,double pThe,double pPhi, double apThe, double apPhi  ){
@@ -121,6 +156,39 @@ class AngDisXiXi {
 						}
 						return tmp;
 				}
+
+				double CalcToIntegralmDIY(){
+						
+						AAProd1212 prod(p_Jpsi_alpha, p_Jpsi_phi,1, 2);
+						AADecay12 Xi(p_Xi_alpha, p_Xi_phi, 1, 1, 2);
+						AADecay12 Xibar(p_Xibar_alpha, p_Xibar_phi, 1, 1, 2);
+						AADecay12 L(p_L_alpha, 0, 1, 1, 2);
+						AADecay12 Lbar(p_Lbar_alpha, 0, 1, 1, 2);
+						double tmp = 0;
+
+						for(int mu=0; mu<4;mu++){// Xi loop
+								for(int nu=0;nu<4;nu++){// Xibar loop
+										for(int k=0;k<4;k++){
+												for(int j=0;j<4;j++){
+														for(int c1 = 0; c1< 2; c1++){
+																for(int c2 = 0; c2 < 2; c2++){
+																		for(int c3 = 0; c3 < 2; c3++){
+																				Int_t idx = mu*512 + nu*128 + k*32 +j*8 + c1*4 + c2*2 + c3;
+																				tmp+=prod.C2(mu, nu, c1)*
+																						Xi.Ac(mu,k, c2)*Xibar.Ac(nu, j, c3)*
+																						L.Ac(k,0, 0)*Lbar.Ac(j, 0, 0)*atoIntmDIY[idx];
+																		}
+																}
+														}
+												}
+										}
+								}
+						}
+						return tmp;
+				}
+
+
+
 				 void SetParameter(double *pp){
 						p_Jpsi_alpha = pp[0];
 						p_Jpsi_phi = pp[1];
@@ -165,6 +233,7 @@ class AngDisXiXi {
 				double  p_Lbar_alpha;
 
 				double atoInt[2048];
+				double atoIntmDIY[2048];
 				double *datamass;
 				double *mdiymass;
 				int Ndata;

@@ -1,6 +1,6 @@
 #include "TRandom.h"
 #include "TH1F.h"
-#include "TF1.h"
+//#include "TF1.h"
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "AngDisXiXi.hh"
@@ -40,16 +40,15 @@ rootfile *rf;
 
 void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 {
-		double llf = rf->IOfcnmll(pp);
+		double llf = rf->fcnmll(pp);
 		if(llf == 0){ cout << "ERROR" << endl; return;}
 		f =  llf;
 }
 //=====================================================================
 // input [1] =  0; [2] =  type; [3] = step; [4] = output file
-void XiXiMLL(int index, int MM){
+void XiXiMLL(int index, int MM, TString outfile_name = "out.txt"){
 
 		ofstream out;
-		TString outfile_name = "out.txt";
 		cout << outfile_name << endl;
 		out.open(outfile_name, ios::out | ios::app);
 
@@ -68,7 +67,7 @@ void XiXiMLL(int index, int MM){
 		// cout << argv[1] << endl;
 		// fit nr is used to tell which analysis cuts that are used
 		myMinuit *minuit=new myMinuit(10);
-	//	minuit->setRandomSeed(3423);
+		minuit->setRandomSeed(3423);
 		Int_t ierflag=0; 
 		Double_t arglist[100];
 		cout << "OK 11111111111" << endl;
@@ -122,10 +121,14 @@ void XiXiMLL(int index, int MM){
 int main(int argc, char **argv){
 
 		int c;
-		int m_command;
+		int m_command = -1;
 		vector<TString> m_year;
 		vector<TString> m_namesample; 		// 
 		TString m_version;
+		TString m_normalization = "mdiy";
+		TString m_outfile = "out.txt";
+		int iJob1 = 0;
+		int iJob2 = 30;
 
 		rf = new rootfile();
 
@@ -150,6 +153,9 @@ int main(int argc, char **argv){
 
 						{"year",    required_argument, 0, 'y'},
 						{"type",    required_argument, 0, 't'},
+						{"jobs",    required_argument, 0, 'j'},
+						{"outfile",    required_argument, 0, 'o'},
+						{"normalization",    required_argument, 0, 'n'},
 						{"cutXiDL",    required_argument, 0, 4},
 						{"cutLmdDL",    required_argument, 0, 5},
 						{"cutXiCosTheta",    required_argument, 0, 6},
@@ -165,7 +171,7 @@ int main(int argc, char **argv){
 				/* getopt_long stores the option index here. */
 				int option_index = 0;
 
-				c = getopt_long (argc, argv, "dv:my:t:",
+				c = getopt_long (argc, argv, "dv:my:t:n:j:o:",
 								long_options, &option_index);
 
 
@@ -209,6 +215,7 @@ int main(int argc, char **argv){
 
 								printf ("option -i with value `%s'\n", optarg);
 								while (optind < argc && argv[optind][0] != '-'){
+								printf ("option -i with value `%s'\n", argv[optind]);
 										m_year.push_back(argv[optind]);
 										optind++;
 								}
@@ -245,7 +252,21 @@ int main(int argc, char **argv){
 						case 13: 
 								cout << "setCutmn2" << endl;
 								rf->setCutmn2(atof(optarg)); break;
-
+						case 'n':
+								m_normalization = optarg;
+								cout << "normalization : " << optarg << endl;
+								break;
+						case 'j':
+								iJob1 = atoi(optarg);
+								while (optind < argc && argv[optind][0] != '-'){
+										iJob2 = atoi(argv[optind]);
+										optind++;
+								}
+								cout << "index of Jobs : " << iJob1 << "	" << iJob2 << endl;
+								break;
+						case 'o': 
+								m_outfile = optarg;
+								break;
 						case 'm':
 								break;
 
@@ -277,6 +298,7 @@ int main(int argc, char **argv){
 
 
 		rf->SetNyear(m_year.size());
+		rf->SetNorm(m_normalization);
 
 		TString path = "/data/liul/workarea/XIXI/fit/boost";
 		switch (m_command){
@@ -291,7 +313,12 @@ int main(int argc, char **argv){
 														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
 												}
 												else if(!m_namesample[j].CompareTo("phsp")){
-														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														if(!m_normalization.CompareTo("phsp")){
+																infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														}
+														else if(!m_normalization.CompareTo("mdiy")){
+																infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+														}
 												}
 												else if(!m_namesample[j].CompareTo("bkg1")){
 														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "bkg1/bkg30x.root";
@@ -317,7 +344,12 @@ int main(int argc, char **argv){
 														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
 												}
 												else if(!m_namesample[j].CompareTo("phsp")){
-														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														if(!m_normalization.CompareTo("phsp")){
+																infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														}
+														else if(!m_normalization.CompareTo("mdiy")){
+																infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+														}
 												}
 												else if(!m_namesample[j].CompareTo("bkg1")){
 														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "bkg1/bkg30x.root";
@@ -342,8 +374,8 @@ int main(int argc, char **argv){
 								cout << endl;
 								rf->InitialMemory();
 								rf->ReadData(1, 30);
-								rf->MassFit();
-								XiXiMLL(1, 30);
+								rf->MassFit(1, m_outfile);
+								XiXiMLL(1, 30, m_outfile);
 								rf->FreeMemory();
 
 
@@ -363,7 +395,12 @@ int main(int argc, char **argv){
 														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
 												}
 												else if(!m_namesample[j].CompareTo("phsp")){
-														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														if(!m_normalization.CompareTo("phsp")){
+																infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														}
+														else if(!m_normalization.CompareTo("mdiy")){
+																infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+														}
 												}
 												else if(!m_namesample[j].CompareTo("bkg1")){
 														infile = path + "/" + m_year[i] + "/" + "xixipm" + "/" + m_version + "/" + "bkg1/bkg30x.root";
@@ -389,7 +426,12 @@ int main(int argc, char **argv){
 														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
 												}
 												else if(!m_namesample[j].CompareTo("phsp")){
-														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														if(!m_normalization.CompareTo("phsp")){
+																infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "phsp/phsp30x.root";
+														}
+														else if(!m_normalization.CompareTo("mdiy")){
+																infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "mdiy/mdiy30x.root";
+														}
 												}
 												else if(!m_namesample[j].CompareTo("bkg1")){
 														infile = path + "/" + m_year[i] + "/" + "xixipp" + "/" + m_version + "/" + "bkg1/bkg30x.root";
@@ -413,10 +455,11 @@ int main(int argc, char **argv){
 								}
 								cout << endl;
 								rf->InitialMemory();
-								for(int i  = 0; i < 30; i++){
+								for(int i  = iJob1; i < iJob2; i++){
 										rf->IOReadData(i, 30);
-									//	rf->MassFit();
-										XiXiMLL(i, 30);
+										rf->readBKG(i);
+								//		rf->MassFit(i, m_outfile);
+										XiXiMLL(i, 30, m_outfile);
 										rf->FreeMemory();
 								}
 								break;
@@ -431,11 +474,11 @@ int main(int argc, char **argv){
 		   for(int i  = 0; i < 30; i++){
 		   rf->IOReadData(i, 30);
 		   rf->MassFit();
-//		XiXiMLL(i, 30);
-rf->FreeMemory();
-}
+		//		XiXiMLL(i, 30);
+		rf->FreeMemory();
+		}
 		 */
 
-return 0;
+		return 0;
 }
 
