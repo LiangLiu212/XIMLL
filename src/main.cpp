@@ -45,10 +45,20 @@ rootfile *rf;
 
 bool isIO;
 
+bool fixAcpXi;
+bool fixphicpXi;
+bool fixAcp0;
+bool fixAcpm;
+
+bool flagcpu = false;
+
+#include "Minimizer.cxx"
+#include "Minimizeriso.cxx"
+
 void fcnMLLG(Int_t &npar, Double_t *gin, Double_t &f, Double_t *pp, Int_t iflag)
 {
 		double llf = 0.0;
-		llf = rf->fcnmll(pp);
+		llf = rf->cpufcnmll(pp);
 		if(llf == 0){ cout << "ERROR" << endl; return;}
 		f =  llf;
 }
@@ -59,7 +69,12 @@ double Rosenbrock(const double * par){
 				pp[i] = par[i];
 		}
 		double llf = 0.0;
-		llf = rf->fcnmll(pp);
+		if(flagcpu){
+				llf = rf->cpufcnmll(pp);
+		}
+		else{
+				llf = rf->fcnmll(pp);
+		}
 		if(llf == 0){ cout << "ERROR" << endl; exit(0);}
 		return llf;
 
@@ -68,9 +83,10 @@ double Rosenbrock(const double * par){
 
 //=====================================================================
 // using minuit2 to minimize the likelihood function
-/*void Minuit2XiXiMLL(int index, int MM, TString outfile_name = "out.txt"){
+void Minuit2XiXiMLL(int index, int MM, TString outfile_name = "out.txt"){
 
 		ofstream out;
+		outfile_name = "Minuit2" + outfile_name;
 		cout << outfile_name << endl;
 		out.open(outfile_name, ios::out | ios::app);
 
@@ -81,21 +97,24 @@ double Rosenbrock(const double * par){
 		double xi_phi   = 0.012;   			  // alpha (Sgm->pbar pi0)
 		double xib_alpha     = 0.3756;   
 		double xib_phi   = -0.012;  
-		double L1_alpha     = 0.692;   
+		double L1_alpha     = 0.672;   
 		double L2_alpha     = -0.751;   
 		double L3_alpha     = 0.751;   
-		double L4_alpha     = -0.692;   
+		double L4_alpha     = -0.672;   
 		cout << "OK" << endl;
 		// cout << argv[1] << endl;
 		// fit nr is used to tell which analysis cuts that are used
 
 		const char * algoName = "migrad";
 		const int printlevel = 1;
-		ROOT::Math::Minimizer* min = new ROOT::Minuit2::Minuit2Minimizer(algoName);
+	//	ROOT::Math::Minimizer* min = new ROOT::Minuit2::Minuit2Minimizer(algoName);
+		ROOT::Minuit2::Minuit2Minimizer* min = new ROOT::Minuit2::Minuit2Minimizer(algoName);
 		min->SetMaxFunctionCalls(1000000);
 		min->SetTolerance(0.001);
 		min->SetPrintLevel(printlevel);
 		ROOT::Math::Functor f(&Rosenbrock,10);
+		min->SetFunction(f);
+		min->SetErrorDef(0.5);
 
 		double step[10] = {0};
 		for(int i = 0; i < 10;i++){
@@ -123,22 +142,58 @@ double Rosenbrock(const double * par){
 		min->SetVariableLimits(9, -1., 0.);
 		min->Minimize();
 
+		
+		cout << "Cov Matrix" << endl;
+		for(int i = 0; i < 10; i++){
+				for(int j = 0; j< 10; j++){
+						cout << Form("%10.3e", min->CovMatrix(i, j)) << "  ";
+				}
+				cout << endl;
+		}
+	
+		cout << "Corr. Matrix" << endl;
+		for(int i = 0; i < 10; i++){
+				for(int j = 0; j< 10; j++){
+						cout << Form("%10.3f", min->Correlation(i, j)) << "  ";
+				}
+				cout << endl;
+		}
+
+
+
+//#define minuit2_test
+#ifndef minuit2_test
+
 		cout << "OK 11111111113" << endl;
 		double res[10], err_res[10];
+		double low[10], high[10];
+		for(int i = 0; i < 10; i++){
+				low[i] = 0;
+				high[i] = 0;
+				min->GetMinosError(i, low[i], high[i]);
+				res[i] = min->State().Parameter(i).Value();
+				err_res[i] = (fabs(low[i]) + fabs(high[i]))/2.0;
+		}
 
+		double fmin = min->State().Fval();
+		int istat = min->Status();
 		out << fmin << "," << istat << ","; 
 		out << res[0]<< "," << err_res[0] << "," << res[1]<< "," << err_res[1]<< ","; 
 		out << res[2]<< "," << err_res[2] << "," << res[3]<< "," << err_res[3]<< ",";
 		out << res[4]<< "," << err_res[4] << "," << res[5]<< "," << err_res[5]<< ",";
 		out << res[6]<< "," << err_res[6] << "," << res[7]<< "," << err_res[7]<< ",";
 		out << res[8]<< "," << err_res[8] << "," << res[9]<< "," << err_res[9]<< endl;
+	
+		for(int i = 0; i < 10; i++){
+				for(int j = 0; j< 10; j++){
+						out << min->CovMatrix(i, j) << ",";
+				}
+				out << endl;
+		}
 		out.close();
 		//	return 0;
+#endif
 }
-
-
-*/
-
 
 //=====================================================================
 // input [1] =  0; [2] =  type; [3] = step; [4] = output file
@@ -146,6 +201,7 @@ void XiXiMLL(int index, int MM, TString outfile_name = "out.txt"){
 
 		ofstream out;
 		cout << outfile_name << endl;
+		outfile_name = "Minuit" + outfile_name;
 		out.open(outfile_name, ios::out | ios::app);
 
 		cout << "OK 11111111113" << endl;
@@ -155,17 +211,17 @@ void XiXiMLL(int index, int MM, TString outfile_name = "out.txt"){
 		double xi_phi   = 0.012;   			  // alpha (Sgm->pbar pi0)
 		double xib_alpha     = 0.3756;   
 		double xib_phi   = -0.012;  
-		double L1_alpha     = 0.692;   
+		double L1_alpha     = 0.672;   
 		double L2_alpha     = -0.751;   
 		double L3_alpha     = 0.751;   
-		double L4_alpha     = -0.692;   
+		double L4_alpha     = -0.672;   
 		cout << "OK" << endl;
 		// cout << argv[1] << endl;
 		// fit nr is used to tell which analysis cuts that are used
 		myMinuit *minuit=new myMinuit(10);
-		if(!isIO){
-				minuit->setRandomSeed(3423);
-		}
+	//	if(!isIO){
+	//			minuit->setRandomSeed(3423);
+	//	}
 		Int_t ierflag=0; 
 		Double_t arglist[100];
 		cout << "OK 11111111111" << endl;
@@ -236,6 +292,11 @@ int main(int argc, char **argv){
 		int iJob2 = 30;
 		bool fbkg3 = false;
 
+		fixAcpXi = false;
+		fixphicpXi = false;
+		fixAcp0 = false;
+		fixAcpm = false;
+
 		rf = new rootfile();
 
 		while (1)
@@ -256,8 +317,13 @@ int main(int argc, char **argv){
 						{"charge",  required_argument,       0, 1005},
 						{"sideband",  no_argument,       0, 1006},
 
-
 						{"rdmseed",  required_argument, 0, 2001},
+
+						{"fixAcpXi",  no_argument,      0, 3001},
+						{"fixphicpXi",  no_argument,    0, 3002},
+						{"fixAcp0",  no_argument,       0, 3003},
+						{"fixAcpm",  no_argument,       0, 3004},
+						{"cpu",  no_argument,       0, 3005},
 
 						{"version",  required_argument, 0, 'v'},
 
@@ -277,6 +343,10 @@ int main(int argc, char **argv){
 						{"cutchi2Lmd",    required_argument, 0, 8},
 						{"cutmn1",    required_argument, 0, 9},
 						{"cutmn2",    required_argument, 0, 10},
+						{"cutncos",    required_argument, 0, 11},
+						{"cutpcos",    required_argument, 0, 12},
+						{"cutnbarcos",    required_argument, 0, 13},
+						{"cutpbarcos",    required_argument, 0, 14},
 						{"fast",      no_argument, 0, 'f'},
 						{"help",      no_argument, 0, 'h'},
 						{0, 0, 0, 0}
@@ -341,6 +411,22 @@ int main(int argc, char **argv){
 								cout << "SedSeed : " << atoi(optarg) << endl;
 								break;
 
+						case 3001:
+								fixAcpXi = true;
+								break;
+						case 3002:
+								fixphicpXi = true;
+								break;
+						case 3003:
+								fixAcp0 = true;
+								break;
+						case 3004:
+								fixAcpm = true;
+								break;
+						case 3005:
+								flagcpu = true;
+								break;
+
 
 						case 'v':
 								m_version = optarg;
@@ -389,6 +475,18 @@ int main(int argc, char **argv){
 						case 10: 
 								cout << "setCutmn2" << endl;
 								rf->setCutmn2(atof(optarg)); break;
+						case 11: 
+								cout << "setCutncos" << endl;
+								rf->setCutncos(atof(optarg)); break;
+						case 12: 
+								cout << "setCutpcos" << endl;
+								rf->setCutpcos(atof(optarg)); break;
+						case 13: 
+								cout << "setCutnbarcos" << endl;
+								rf->setCutnbarcos(atof(optarg)); break;
+						case 14: 
+								cout << "setCutpbarcos" << endl;
+								rf->setCutpbarcos(atof(optarg)); break;
 						case 'n':
 								m_normalization = optarg;
 								cout << "normalization : " << optarg << endl;
@@ -502,7 +600,13 @@ int main(int argc, char **argv){
 								rf->ReadData();
 								rf->MassFit();
 								rf->SetBKGSysTest(m_sysbkg);
-								XiXiMLL(1, 30, m_outfile);
+							//	XiXiMLL(1, 30, m_outfile);
+								clock_t start,end;
+								start = clock();
+								Minuit2XiXiMLL(1, 30, m_outfile);
+								end = clock();
+								double time3 = ((double)(end-start))/CLOCKS_PER_SEC;
+								cout << "CPU 3:  " << time3 << " seconds" << endl;
 								rf->Print();
 								rf->FreeMemory();
 								break;
@@ -523,10 +627,27 @@ int main(int argc, char **argv){
 								cout << endl;
 								for(int i = iJob1; i < iJob2; i++){
 										rf->InitialMemory();
+										if(flagcpu){
+												cout << "CPU 3 S:   seconds" << endl;
+										}
+										else{
+												cout << "GPU 3 S:   seconds" << endl;
+										}
 										rf->Trial(i);
 										rf->ReadData();
 										rf->MassFit();
-										XiXiMLL(1, 30, m_outfile);
+									//	XiXiMLL(1, 30, m_outfile);
+										clock_t start,end;
+										start = clock();
+										Minuit2XiXiMLL(1, 30, m_outfile);
+										end = clock();
+										double time3 = ((double)(end-start))/CLOCKS_PER_SEC;
+										if(flagcpu){
+												cout << "CPU 3:  " << time3 << " seconds" << endl;
+										}
+										else{
+												cout << "CPU 3:  " << time3 << " seconds" << endl;
+										}
 										rf->Print();
 										rf->FreeMemory();
 								}

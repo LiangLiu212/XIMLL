@@ -2,8 +2,10 @@
 #define MN_AngDisXiXi_H_
 #include "AAProd1212.hh"
 #include "AADecay12.hh"
+#include "TString.h"
 #include <cmath>
 #include <iostream>
+#include <fstream>
 using namespace std;
 class AngDisXiXi {
 		//e+e- -> (Ss->L pi-) (S->nb pi+) (L->p pi-)
@@ -121,14 +123,63 @@ class AngDisXiXi {
 				void PrintInt(){
 						for (int i =0 ; i < 2048; i ++){
 								if(atoInt[i] != 0)
-								cout << atoInt[i] << endl;
+										cout << atoInt[i] << endl;
 						}
+				}
 
+				void SaveInt(const TString outfile, const int NN){
+						ofstream oInt(outfile, ios::out | ios::binary);
+						if(!oInt){
+								cerr << "open error! => " << outfile << endl;
+								exit(2);
+						}
+						oInt.write((char*)&NN, sizeof(int));
+						oInt.write((char*)atoInt, sizeof(double) * 2048);
+						oInt.close();
+				}
+				void SaveIntmDIY(const TString outfile, const int NN){
+						ofstream oInt(outfile, ios::out | ios::binary);
+						if(!oInt){
+								cerr << "open error! => " << outfile << endl;
+								exit(2);
+						}
+						oInt.write((char*)&NN, sizeof(int));
+						oInt.write((char*)atoIntmDIY, sizeof(double) * 2048);
+						oInt.close();
+				}
 
+				int ReadInt(const TString infile){
+						ifstream oint(infile, ios::in | ios::binary);
+						if(!oint){
+								cerr << "open error! => " << infile << endl;
+								exit(2);
+						}
+						int NN = 0;
+						oint.read((char*)&NN, sizeof(int));
+					//	cout << "NN : " << NN << endl;
+						oint.read((char*)atoInt, sizeof(double) * 2048);
+						oint.close();
+						return NN;
+				}
+				int ReadIntmDIY(const TString infile){
+						ifstream oint(infile, ios::in | ios::binary);
+						if(!oint){
+								cerr << "open error! => " << infile << endl;
+								exit(2);
+						}
+						int NN = 0;
+						oint.read((char*)&NN, sizeof(int));
+					//	cout << "NN : " << NN << endl;
+						oint.read((char*)atoIntmDIY, sizeof(double) * 2048);
+					//	for(int i  = 0; i < 2048; i++){
+					//			cout << atoIntmDIY[i] << endl;
+					//	}
+						oint.close();
+						return NN;
 				}
 
 				double CalcToIntegral(){
-						
+
 						AAProd1212 prod(p_Jpsi_alpha, p_Jpsi_phi,1, 2);
 						AADecay12 Xi(p_Xi_alpha, p_Xi_phi, 1, 1, 2);
 						AADecay12 Xibar(p_Xibar_alpha, p_Xibar_phi, 1, 1, 2);
@@ -158,7 +209,7 @@ class AngDisXiXi {
 				}
 
 				double CalcToIntegralmDIY(){
-						
+
 						AAProd1212 prod(p_Jpsi_alpha, p_Jpsi_phi,1, 2);
 						AADecay12 Xi(p_Xi_alpha, p_Xi_phi, 1, 1, 2);
 						AADecay12 Xibar(p_Xibar_alpha, p_Xibar_phi, 1, 1, 2);
@@ -189,7 +240,7 @@ class AngDisXiXi {
 
 
 
-				 void SetParameter(double *pp){
+				void SetParameter(double *pp){
 						p_Jpsi_alpha = pp[0];
 						p_Jpsi_phi = pp[1];
 						p_Xi_alpha= pp[2];
@@ -200,26 +251,26 @@ class AngDisXiXi {
 						p_Lbar_alpha=pp[7];
 				}
 
-				 void setDataMass(int i, double mass){
-						 datamass[i] = mass;
-						 Ndata = i;
-				 }
-				 void setMCMass(int i, double mass){
-						 mdiymass[i] = mass;
-						 Nmdiy = i;
-				 }
-				 double DataMass(int n){
-						 return datamass[n];
-				 }
-				 double MCMass(int n){
-						 return mdiymass[n];
-				 }
-				 int getNdata(){
-						 return Ndata+1;
-				 }
-				 int getNmc(){
-						 return Nmdiy+1;
-				 }
+				void setDataMass(int i, double mass){
+						datamass[i] = mass;
+						Ndata = i;
+				}
+				void setMCMass(int i, double mass){
+						mdiymass[i] = mass;
+						Nmdiy = i;
+				}
+				double DataMass(int n){
+						return datamass[n];
+				}
+				double MCMass(int n){
+						return mdiymass[n];
+				}
+				int getNdata(){
+						return Ndata+1;
+				}
+				int getNmc(){
+						return Nmdiy+1;
+				}
 
 		private:
 				bool isPHSPinte;

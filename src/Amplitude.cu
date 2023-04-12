@@ -81,7 +81,7 @@ __global__ void gpu_Amp(
 				double *amp,
 				const int g_NN,
 				const AA_parameter g_para,
-				const int g_flag, double *Matrix){
+				const int g_flag, double *Matrix, const double norm){
 
 		int index = blockIdx.x * blockDim.x + threadIdx.x;
 		if( index <  g_NN){
@@ -114,10 +114,65 @@ __global__ void gpu_Amp(
 				__syncthreads();
 
 				if(IMat == 0){
-						amp[iEvt] = Amp(Matrix, iEvt);
+						amp[iEvt] = log( Amp(Matrix, iEvt) / norm);
 						//printf("%d ~ %f\n", iEvt, amp[iEvt]);
 				}
 		}
 		__syncthreads();
 }
+
+
+// Bandwidth: (((2^27) + 1) unsigned ints * 4 bytes/unsigned int)/(38.716 * 10^-3 s)
+//  13.867 GB/s = 96.297% -> excellent memory bandwidth
+// Reasonable point to stop working on this implementation's optimization
+// Algorithm is not compute-intensive, so acheiving >75% of theoretical bandwidth is goal
+// Main strategies used:
+// - Process as much data as possible (in terms of algorithm correctness) in shared memory
+// - Use sequential addressing to get rid of bank conflicts
+__global__
+void block_sum_reduce(double* const d_block_sums, 
+	double* const d_in,
+	const unsigned int d_in_len)
+{
+	extern __shared__ unsigned int s_out[];
+
+	unsigned int max_elems_per_block = blockDim.x * 2;
+	unsigned int glbl_tid = blockDim.x * blockIdx.x + threadIdx.x;
+	unsigned int tid = threadIdx.x;
+	
+	// Zero out shared memory
+	// Especially important when padding shmem for
+	//  non-power of 2 sized input
+	s_out[threadIdx.x] = 0;
+	s_out[threadIdx.x + blockDim.x] = 0;
+
+	__syncthreads();
+
+	// Copy d_in to shared memory per block
+	if (glbl_tid < d_in_len)
+	{
+		s_out[threadIdx.x] = d_in[glbl_tid];
+		if (glbl_tid + blockDim.x < d_in_len)
+			s_out[threadIdx.x + blockDim.x] = d_in[glbl_tid + blockDim.x];
+	}
+	__syncthreads();
+
+	// Actually do the reduction
+	for (unsigned int s = blockDim.x; s > 0; s >>= 1) {
+		if (tid < s) {
+			s_out[tid] += s_out[tid + s];
+		}
+		__syncthreads();
+	}
+
+	// write result for this block to global mem
+	if (tid == 0)
+		d_block_sums[blockIdx.x] = s_out[0];
+}
+
+
+
+
+
+
 

@@ -37,7 +37,8 @@ __global__ void gpu_Amp(
 				double *amp,
 				const int g_NN,
 				const AA_parameter g_para,
-				const int g_flag, double *Matrix);
+				const int g_flag, double *Matrix, const double norm);
+
 
 #endif
 
